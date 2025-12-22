@@ -1,0 +1,64 @@
+
+name: deploy-infra
+
+on:
+  workflow_dispatch: # Manual trigger for safety
+  push:
+    branches: [ "main" ]
+
+env:
+  LOCATION: australiaeast
+  TEMPLATE_FILE: infra/core/main.bicep
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env:
+          - name: dev
+            subscriptionId: 383cf7d8-46ce-433f-9b54-ceac47c81c34
+            resourceGroup: ai-dev-sub
+            paramFile: infra/params/dev.bicepparam
+            environment: dev
+          - name: test
+            subscriptionId: bfe60da2-f477-42dc-b9cc-7b90b087e92e
+            resourceGroup: ai-test-sub
+            paramFile: infra/params/test.bicepparam
+            environment: test
+          - name: prod
+            subscriptionId: 1c147026-fa0d-40e2-a7ed-aa606a8c4ef9
+            resourceGroup: ai-prod-sub
+            paramFile: infra/params/prod.bicepparam
+            environment: prod
+
+    environment: ${{ matrix.env.environment }} # Approval gate per environment
+    steps:
+    - uses: actions/checkout@v4
+
+    # Login using Service Principal credentials stored in GitHub Secrets
+    - uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Set subscription
+      run: az account set --subscription "${{ matrix.env.subscriptionId }}"
+
+    - name: Ensure Resource Group exists
+      run: az group create -n "${{ matrix.env.resourceGroup }}" -l "${{ env.LOCATION }}"
+
+    - name: What-if
+      run: |
+        echo "Running what-if for ${{ matrix.env.name }}..."
+        az deployment group what-if \
+          --resource-group "${{ matrix.env.resourceGroup }}" \
+          --template-file "${{ env.TEMPLATE_FILE }}" \
+          --parameters "${{ matrix.env.paramFile }}"
+
+    - name: Deploy
+      run: |
+        echo "Deploying to ${{ matrix.env.name }}..."
+        az deployment group create \
+          --resource-group "${{ matrix.env.resourceGroup }}" \
+          --template-file "${{ env.TEMPLATE_FILE }}" \
+          --parameters "${{ matrix.env.paramFile }}"
