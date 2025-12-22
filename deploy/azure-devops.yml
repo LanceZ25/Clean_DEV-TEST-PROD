@@ -1,0 +1,155 @@
+
+# deploy/azure-devops.yml
+trigger:
+  branches:
+    include:
+      - main
+
+# Central variables (override in DevOps UI if needed)
+variables:
+  location: 'australiaeast'
+  templateFile: 'infra/core/main.bicep'
+
+  # Param files
+  devParamFile: 'infra/params/dev.bicepparam'
+  testParamFile: 'infra/params/test.bicepparam'
+  prodParamFile: 'infra/params/prod.bicepparam'
+
+  # Resource Groups per environment
+  devRgName: 'rg-ai-core-dev'
+  testRgName: 'rg-ai-core-test'
+  prodRgName: 'rg-ai-core-prod'
+
+  # Subscription IDs (from your list)
+  devSubId: '383cf7d8-46ce-433f-9b54-ceac47c81c34'   # ai-dev-sub
+  testSubId: 'bfe60da2-f477-42dc-b9cc-7b90b087e92e'  # ai-test-sub
+  prodSubId: '1c147026-fa0d-40e2-a7ed-aa606a8c4ef9'  # ai-prod-sub
+
+stages:
+# =======================
+# Stage 1: Validate Dev (what-if)
+# =======================
+- stage: Validate_Dev
+  displayName: 'Validate (what-if) - Dev'
+  jobs:
+  - job: WhatIfDev
+    displayName: 'What-if Dev'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      displayName: 'What-if Dev'
+      inputs:
+        # Service connection bound to Dev subscription
+        azureSubscription: 'SC-Azure-DevOps-Dev'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -euo pipefail
+          az account set --subscription "${{ variables.devSubId }}"
+          az group create -n "${{ variables.devRgName }}" -l "${{ variables.location }}"
+          az deployment group what-if \
+            --resource-group "${{ variables.devRgName }}" \
+            --template-file "${{ variables.templateFile }}" \
+            --parameters "${{ variables.devParamFile }}"
+
+# =======================
+# Stage 2: Deploy Dev
+# =======================
+- stage: Deploy_Dev
+  displayName: 'Deploy - Dev'
+  dependsOn: Validate_Dev
+  jobs:
+  - job: DeployDev
+    displayName: 'Deploy Dev'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      displayName: 'Deploy Dev'
+      inputs:
+        azureSubscription: 'SC-Azure-DevOps-Dev'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -euo pipefail
+          az account set --subscription "${{ variables.devSubId }}"
+          az deployment group create \
+            --resource-group "${{ variables.devRgName }}" \
+            --template-file "${{ variables.templateFile }}" \
+            --parameters "${{ variables.devParamFile }}"
+
+# =======================
+# Stage 3: Deploy Test
+# =======================
+- stage: Deploy_Test
+  displayName: 'Deploy - Test'
+  dependsOn: Deploy_Dev
+  jobs:
+  - job: DeployTest
+    displayName: 'Deploy Test'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      displayName: 'Deploy Test'
+      inputs:
+        # Service connection bound to Test subscription
+        azureSubscription: 'SC-Azure-DevOps-Test'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -euo pipefail
+          az account set --subscription "${{ variables.testSubId }}"
+          az group create -n "${{ variables.testRgName }}" -l "${{ variables.location }}"
+          az deployment group create \
+            --resource-group "${{ variables.testRgName }}" \
+            --template-file "${{ variables.templateFile }}" \
+            --parameters "${{ variables.testParamFile }}"
+
+# =======================
+# Stage 4: Approval Gate (before Prod)
+# =======================
+- stage: Approve_Prod
+  displayName: 'Approval Gate'
+  dependsOn: Deploy_Test
+  jobs:
+  - job: WaitForApproval
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: echo "Manual approval required for Prod deployment via DevOps Environments."
+      displayName: 'Approval placeholder'
+    # Configure Project Settings -> Pipelines -> Environments -> prod -> approvals
+
+# =======================
+# Stage 5: Deploy Prod
+# =======================
+- stage: Deploy_Prod
+  displayName: 'Deploy - Prod'
+  dependsOn: Approve_Prod
+  jobs:
+  - job: DeployProd
+    displayName: 'Deploy Prod'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      displayName: 'Deploy Prod'
+      inputs:
+        # Service connection bound to Prod subscription
+        azureSubscription: 'SC-Azure-DevOps-Prod'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -euo pipefail
+          az account set --subscription "${{ variables.prodSubId }}"
+          az group create -n "${{ variables.prodRgName }}" -l "${{ variables.location }}"
+          az deployment group create \
+            --resource-group "${{ variables.prodRgName }}" \
+            --template-file "${{ variables.templateFile }}" \
+
