@@ -1,4 +1,5 @@
 
+
 name: deploy-infra
 
 on:
@@ -18,18 +19,18 @@ jobs:
         env:
           - name: dev
             subscriptionId: 383cf7d8-46ce-433f-9b54-ceac47c81c34
-            resourceGroup: ai-dev-sub
-            paramFile: infra/params/dev.bicepparam
+            resourceGroup: rg-ai-core-dev
+            paramFile: infra/params/dev.json
             environment: dev
           - name: test
             subscriptionId: bfe60da2-f477-42dc-b9cc-7b90b087e92e
-            resourceGroup: ai-test-sub
-            paramFile: infra/params/test.bicepparam
+            resourceGroup: rg-ai-core-test
+            paramFile: infra/params/test.json
             environment: test
           - name: prod
             subscriptionId: 1c147026-fa0d-40e2-a7ed-aa606a8c4ef9
-            resourceGroup: ai-prod-sub
-            paramFile: infra/params/prod.bicepparam
+            resourceGroup: rg-ai-core-prod
+            paramFile: infra/params/prod.json
             environment: prod
 
     environment: ${{ matrix.env.environment }} # Approval gate per environment
@@ -53,7 +54,7 @@ jobs:
         az deployment group what-if \
           --resource-group "${{ matrix.env.resourceGroup }}" \
           --template-file "${{ env.TEMPLATE_FILE }}" \
-          --parameters "${{ matrix.env.paramFile }}"
+          --parameters @"${{ matrix.env.paramFile }}"
 
     - name: Deploy
       run: |
@@ -61,4 +62,4 @@ jobs:
         az deployment group create \
           --resource-group "${{ matrix.env.resourceGroup }}" \
           --template-file "${{ env.TEMPLATE_FILE }}" \
-          --parameters "${{ matrix.env.paramFile }}"
+          --parameters @"${{ matrix.env.paramFile }}"
