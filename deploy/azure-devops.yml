@@ -7,21 +7,17 @@ trigger:
 variables:
   location: 'australiaeast'
   templateFile: 'infra/core/main.bicep'
-
-  # JSON param files
-  devParamJson:  'infra/params/dev.json'
+  devParamJson: 'infra/params/dev.json'
   testParamJson: 'infra/params/test.json'
   prodParamJson: 'infra/params/prod.json'
-
-  # Resource groups
-  devRgName:  'rg-ai-core-dev'
+  devRgName: 'rg-ai-core-dev'
   testRgName: 'rg-ai-core-test'
   prodRgName: 'rg-ai-core-prod'
+  runWhatIfDev: 'true'
+  runWhatIfTest: 'true'
+  runWhatIfProd: 'true'
 
 stages:
-# =======================
-# Stage 1: Deploy Dev
-# =======================
 - stage: Deploy_Dev
   displayName: 'Deploy - Dev'
   jobs:
@@ -31,6 +27,22 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - checkout: self
+
+    - task: AzureCLI@2
+      condition: eq(variables['runWhatIfDev'], 'true')
+      displayName: 'What-if Dev'
+      inputs:
+        azureSubscription: 'SC-Azure-DevOps-Dev'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -euo pipefail
+          az group create -n "${{ variables.devRgName }}" -l "${{ variables.location }}"
+          az deployment group what-if \
+            --resource-group "${{ variables.devRgName }}" \
+            --template-file "${{ variables.templateFile }}" \
+            --parameters @"${{ variables.devParamJson }}"
+
     - task: AzureCLI@2
       displayName: 'Deploy Dev'
       inputs:
@@ -39,30 +51,26 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           set -euo pipefail
-          az group create -n "${{ variables.devRgName }}" -l "${{ variables.location }}"
           az deployment group create \
             --resource-group "${{ variables.devRgName }}" \
             --template-file "${{ variables.templateFile }}" \
             --parameters @"${{ variables.devParamJson }}"
 
-# =======================
-# Stage 2: Approval Gate (Test)
-# =======================
+# ---------- Approval Gate (Test) via Environment (deployment job) ----------
 - stage: Approve_Test
   displayName: 'Approval Gate - Test'
   dependsOn: Deploy_Dev
   jobs:
-  - job: WaitForApprovalTest
-    environment: 'test'   # Project Settings -> Environments -> test -> add approvers
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - script: echo "Awaiting approval to deploy to Test..."
-      displayName: 'Approval placeholder'
+  - deployment: AwaitTestApproval
+    displayName: 'Await Test Approval'
+    environment: 'test'  # Project Settings → Environments → test → add Approvals
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: echo "Waiting for TEST environment approval..."
+            displayName: 'Approval placeholder'
 
-# =======================
-# Stage 3: Deploy Test
-# =======================
 - stage: Deploy_Test
   displayName: 'Deploy - Test'
   dependsOn: Approve_Test
@@ -73,6 +81,22 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - checkout: self
+
+    - task: AzureCLI@2
+      condition: eq(variables['runWhatIfTest'], 'true')
+      displayName: 'What-if Test'
+      inputs:
+        azureSubscription: 'SC-Azure-DevOps-Test'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -euo pipefail
+          az group create -n "${{ variables.testRgName }}" -l "${{ variables.location }}"
+          az deployment group what-if \
+            --resource-group "${{ variables.testRgName }}" \
+            --template-file "${{ variables.templateFile }}" \
+            --parameters @"${{ variables.testParamJson }}"
+
     - task: AzureCLI@2
       displayName: 'Deploy Test'
       inputs:
@@ -81,30 +105,26 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           set -euo pipefail
-          az group create -n "${{ variables.testRgName }}" -l "${{ variables.location }}"
           az deployment group create \
             --resource-group "${{ variables.testRgName }}" \
             --template-file "${{ variables.templateFile }}" \
             --parameters @"${{ variables.testParamJson }}"
 
-# =======================
-# Stage 4: Approval Gate (Prod)
-# =======================
+# ---------- Approval Gate (Prod) via Environment (deployment job) ----------
 - stage: Approve_Prod
   displayName: 'Approval Gate - Prod'
   dependsOn: Deploy_Test
   jobs:
-  - job: WaitForApprovalProd
-    environment: 'prod'   # Project Settings -> Environments -> prod -> add approvers
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - script: echo "Awaiting approval to deploy to Prod..."
-      displayName: 'Approval placeholder'
+  - deployment: AwaitProdApproval
+    displayName: 'Await Prod Approval'
+    environment: 'prod'  # Project Settings → Environments → prod → add Approvals
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: echo "Waiting for PROD environment approval..."
+            displayName: 'Approval placeholder'
 
-# =======================
-# Stage 5: Deploy Prod
-# =======================
 - stage: Deploy_Prod
   displayName: 'Deploy - Prod'
   dependsOn: Approve_Prod
@@ -115,6 +135,22 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - checkout: self
+
+    - task: AzureCLI@2
+      condition: eq(variables['runWhatIfProd'], 'true')
+      displayName: 'What-if Prod'
+      inputs:
+        azureSubscription: 'SC-Azure-DevOps-Prod'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -euo pipefail
+          az group create -n "${{ variables.prodRgName }}" -l "${{ variables.location }}"
+          az deployment group what-if \
+            --resource-group "${{ variables.prodRgName }}" \
+            --template-file "${{ variables.templateFile }}" \
+            --parameters @"${{ variables.prodParamJson }}"
+
     - task: AzureCLI@2
       displayName: 'Deploy Prod'
       inputs:
@@ -123,9 +159,7 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           set -euo pipefail
-          az group create -n "${{ variables.prodRgName }}" -l "${{ variables.location }}"
           az deployment group create \
             --resource-group "${{ variables.prodRgName }}" \
             --template-file "${{ variables.templateFile }}" \
             --parameters @"${{ variables.prodParamJson }}"
-
