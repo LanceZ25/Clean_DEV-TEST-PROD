@@ -11,7 +11,7 @@ param location string
 param skuName string = 'standard'
 
 @description('Enable purge protection (true/false)')
-param enablePurgeProtection bool = false
+param enablePurgeProtection bool = true
 
 @description('Tenant ID for the directory')
 param tenantId string
