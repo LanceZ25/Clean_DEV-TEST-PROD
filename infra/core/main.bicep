@@ -22,8 +22,22 @@ param location string = resourceGroup().location
 @description('AAD Tenant ID for Key Vault')
 param tenantId string
 
-// ✅ Removed purge protection parameter and hardcoded it in kvModule
+@description('Public network access setting for Key Vault')
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+param publicNetworkAccess string = 'Enabled'
+
+@description('Kind for Azure AI Foundry (e.g., AIServices)')
+param kind string = 'AIServices'
+
+@description('SKU name for Azure AI Foundry (e.g., S0)')
+param skuName string = 'S0'
+
+// -----------------------------
 // Storage Account
+// -----------------------------
 module storageModule './storage.bicep' = {
   name: 'storageModule'
   params: {
@@ -32,18 +46,23 @@ module storageModule './storage.bicep' = {
   }
 }
 
-// Key Vault (always enable purge protection)
+// -----------------------------
+// Key Vault (always enable purge protection inside keyvault.bicep)
+// Pass publicNetworkAccess so your parameter file matches.
+// -----------------------------
 module kvModule './keyvault.bicep' = {
   name: 'kvModule'
   params: {
     keyVaultName: keyVaultName
     location: location
     tenantId: tenantId
-    // Removed enablePurgeProtection param; handled inside keyvault.bicep
+    publicNetworkAccess: publicNetworkAccess
   }
 }
 
+// -----------------------------
 // App Configuration
+// -----------------------------
 module appConfigModule './appconfig.bicep' = {
   name: 'appConfigModule'
   params: {
@@ -52,7 +71,9 @@ module appConfigModule './appconfig.bicep' = {
   }
 }
 
+// -----------------------------
 // Application Insights
+// -----------------------------
 module appInsightsModule './appinsights.bicep' = {
   name: 'appInsightsModule'
   params: {
@@ -61,14 +82,18 @@ module appInsightsModule './appinsights.bicep' = {
   }
 }
 
+// -----------------------------
 // Azure AI Foundry
+// Pass kind and skuName so your parameter file validates.
+// -----------------------------
 module aifModule './ai-foundry.bicep' = {
   name: 'aifModule'
   params: {
     aifName: aifName
     location: location
+    kind: kind
+    skuName: skuName
   }
 }
-
 
 

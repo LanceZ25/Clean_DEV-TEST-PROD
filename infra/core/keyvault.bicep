@@ -1,21 +1,19 @@
 
-targetScope = 'resourceGroup'
-
 @description('Name of the Key Vault')
 param keyVaultName string
 
 @description('Azure location')
-param location string = resourceGroup().location
-
-@description('SKU for Key Vault')
-@allowed([
-  'standard'
-  'premium'
-])
-param skuName string = 'standard'
+param location string
 
 @description('Tenant ID for the directory')
 param tenantId string
+
+@description('Public network access setting for Key Vault')
+@allowed([
+  'Enabled'
+  'Disabled'
+])
+param publicNetworkAccess string = 'Enabled'
 
 resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' = {
   name: keyVaultName
@@ -24,18 +22,14 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' = {
     tenantId: tenantId
     sku: {
       family: 'A'
-      name: skuName
+      name: 'standard'
     }
-    // Soft-delete is always enabled by default in this API version
-    // Purge protection: Disabled (matches your current vault state)
-    enablePurgeProtection: false
-
+    enablePurgeProtection: true
+    publicNetworkAccess: publicNetworkAccess
     enabledForDeployment: true
     enabledForDiskEncryption: true
     enabledForTemplateDeployment: true
-    publicNetworkAccess: 'Enabled'
   }
 }
-
 
 
