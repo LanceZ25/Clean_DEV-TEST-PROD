@@ -10,9 +10,12 @@
     "aifName": { "value": "cario-aifoundry-prod" },
     "location": { "value": "australiaeast" },
     "tenantId": { "value": "89ad898b-5bd9-47c4-bb8d-1d3bcc077c84" },
-    "enablePurgeProtection": { "value": true }
+    "publicNetworkAccess": { "value": "Enabled" },
+    "kind": { "value": "AIServices" },
+    "skuName": { "value": "S0" }
   }
 }
+
 
 
 
