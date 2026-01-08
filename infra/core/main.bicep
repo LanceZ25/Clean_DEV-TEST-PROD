@@ -22,6 +22,15 @@ param location string = resourceGroup().location
 @description('AAD Tenant ID for Key Vault')
 param tenantId string
 
+
+@description('App Configuration tier (free=Dev/Test, standard=Prod)')
+@allowed([
+  'free'
+  'standard'
+])
+param appConfigTier string = 'free'
+
+
 @description('Public network access setting for Key Vault')
 @allowed([
   'Enabled'
@@ -68,6 +77,7 @@ module appConfigModule './appconfig.bicep' = {
   params: {
     appConfigName: appConfigName
     location: location
+    tier: appConfigTier
   }
 }
 

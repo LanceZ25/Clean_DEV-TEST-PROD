@@ -1,4 +1,5 @@
 
+
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
@@ -12,9 +13,13 @@
     "tenantId": { "value": "89ad898b-5bd9-47c4-bb8d-1d3bcc077c84" },
     "publicNetworkAccess": { "value": "Enabled" },
     "kind": { "value": "AIServices" },
-    "skuName": { "value": "S0" }
+    "skuName": { "value": "S0" },
+    "appConfigTier": { "value": "free" }
   }
 }
+
+
+
 
 
 

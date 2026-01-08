@@ -7,20 +7,23 @@ param appConfigName string
 @description('Azure location')
 param location string
 
-@description('Pricing tier for App Configuration')
-param skuName string = 'Standard' // Default is Standard; Developer is for non-prod
+@description('Tier (free=Developer, standard=Production). Default: free')
+@allowed([
+  'free'      // Developer tier
+  'standard'  // Production tier
+])
+param tier string = 'free'
 
 resource appConfig 'Microsoft.AppConfiguration/configurationStores@2023-03-01' = {
   name: appConfigName
   location: location
   sku: {
-    name: skuName
+    name: tier
   }
-  properties: {
-    // Telemetry disabled by default
-    disableLocalAuth: false
-    encryption: {
-      keyVaultProperties: null
-    }
-  }
+  // Optional properties (enable only if you use private endpoints or customer-managed keys)
+  // properties: {
+  //   publicNetworkAccess: 'Enabled'
+  // }
 }
+
+output appConfigEndpoint string = appConfig.properties.endpoint
