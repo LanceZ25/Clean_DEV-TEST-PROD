@@ -5,7 +5,7 @@
   "parameters": {
     "storageAccountName": { "value": "carioaistoragetest" },
     "keyVaultName": { "value": "cario-ai-vault-test" },
-    "appConfigName": { "value": "cario-appconfig-test" },
+    "appConfigName": { "value": "cario-appconfig-test-001" },
     "appInsightsName": { "value": "cario-ai-insights-test" },
     "aifName": { "value": "cario-aifoundry-test" },
     "location": { "value": "australiaeast" },
