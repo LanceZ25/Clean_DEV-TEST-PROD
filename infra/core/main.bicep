@@ -22,14 +22,12 @@ param location string = resourceGroup().location
 @description('AAD Tenant ID for Key Vault')
 param tenantId string
 
-
 @description('App Configuration tier (free=Dev/Test, standard=Prod)')
 @allowed([
   'free'
-  'standard'
+  'developer'
 ])
-param appConfigTier string = 'free'
-
+param appConfigTier string = 'developer'
 
 @description('Public network access setting for Key Vault')
 @allowed([
