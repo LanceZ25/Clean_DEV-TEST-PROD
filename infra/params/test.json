@@ -13,7 +13,7 @@
     "publicNetworkAccess": { "value": "Enabled" },
     "kind": { "value": "AIServices" },
     "skuName": { "value": "S0" },
-    "appConfigTier": { "value": "free" }   
+    "appConfigTier": { "value": "developer" }
   }
 }
 

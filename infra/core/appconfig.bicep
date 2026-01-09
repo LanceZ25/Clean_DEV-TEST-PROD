@@ -10,9 +10,9 @@ param location string
 @description('Tier (free=Developer, standard=Production). Default: free')
 @allowed([
   'free'      // Developer tier
-  'standard'  // Production tier
+  'developer'  // Production tier
 ])
-param tier string = 'free'
+param tier string = 'developer'
 
 resource appConfig 'Microsoft.AppConfiguration/configurationStores@2023-03-01' = {
   name: appConfigName
